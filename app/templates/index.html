@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>OpenGist Gist Mirror</h1>
+<p class="muted">Single-tenant mirror of all gists for one GitHub account.</p>
+
+{% if message %}
+<div class="alert ok">{{ message }}</div>
+{% endif %}
+{% if error %}
+<div class="alert err">{{ error }}</div>
+{% endif %}
+
+<section class="card">
+    <h2>Configuration</h2>
+    <p class="muted">
+        GitHub token configured: <strong>{{ "Yes" if github_configured else "No" }}</strong> |
+        OpenGist auth configured: <strong>{{ "Yes" if opengist_configured else "No" }}</strong>
+    </p>
+    <form method="post" action="/settings">
+        <div class="row">
+            <label class="field">
+                <span>OpenGist URL</span>
+                <input type="text" name="opengist_url" value="{{ app_settings.opengist_url or '' }}" placeholder="https://opengist.example.com or host.docker.internal:6157" />
+            </label>
+            <label class="field">
+                <span>OpenGist Username (leave blank to keep existing)</span>
+                <input type="text" name="opengist_username" value="{{ app_settings.opengist_username or '' }}" placeholder="your-opengist-username" />
+            </label>
+            <label class="field">
+                <span>Sync interval (minutes)</span>
+                <input type="number" name="sync_interval_minutes" min="1" value="{{ app_settings.sync_interval_minutes }}" />
+            </label>
+        </div>
+        <div class="row">
+            <label class="field">
+                <span>GitHub Token (leave blank to keep existing)</span>
+                <input type="password" name="github_token" value="" placeholder="ghp_..." />
+            </label>
+            <label class="field">
+                <span>OpenGist Password or Token (leave blank to keep existing)</span>
+                <input type="password" name="opengist_token" value="" placeholder="password/token (or legacy username:token)" />
+            </label>
+        </div>
+        <div class="row">
+            <label>
+                <input type="checkbox" name="enabled" {% if app_settings.enabled %}checked{% endif %} />
+                Enable scheduled sync
+            </label>
+        </div>
+        <button class="btn-primary" type="submit">Save Settings</button>
+    </form>
+</section>
+
+<section class="card">
+    <h2>Manual Sync</h2>
+    <form method="post" action="/sync">
+        <button class="btn-secondary" type="submit">Run Sync Now</button>
+    </form>
+</section>
+
+<section class="card">
+    <h2>Recent Sync Runs</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Started</th>
+                <th>Finished</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Synced</th>
+                <th>Failed</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for run in runs %}
+            <tr>
+                <td>{{ run.id }}</td>
+                <td>{{ run.started_at }}</td>
+                <td>{{ run.finished_at or "-" }}</td>
+                <td class="status-{{ run.status }}">{{ run.status }}</td>
+                <td>{{ run.total_gists }}</td>
+                <td>{{ run.synced_gists }}</td>
+                <td>{{ run.failed_gists }}</td>
+                <td>{{ run.notes or "-" }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="8">No sync runs yet.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="card">
+    <h2>Mirrored Gists (latest 20)</h2>
+    <p class="muted">Total mirrored records: {{ mirrored_count }}</p>
+    <table>
+        <thead>
+        <tr>
+            <th>GitHub Gist ID</th>
+            <th>OpenGist Gist ID</th>
+            <th>Last GitHub Update</th>
+            <th>Last Sync</th>
+            <th>Status</th>
+            <th>Error</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in mirrored %}
+            <tr>
+                <td>{{ item.github_gist_id }}</td>
+                <td>{{ item.opengist_gist_id or "-" }}</td>
+                <td>{{ item.last_github_updated_at or "-" }}</td>
+                <td>{{ item.last_sync_at }}</td>
+                <td class="status-{{ item.last_status }}">{{ item.last_status }}</td>
+                <td>{{ item.last_error or "-" }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="6">No mirrored gists yet.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
+
